@@ -3,14 +3,6 @@ require("config.lazy")
 require("mason").setup()
 require("mason-lspconfig").setup()
 
-local lspconfig = require('lspconfig')
-lspconfig.ruby_lsp.setup({
-    init_options = {
-        formatter = 'standard',
-        linters = { 'standard' },
-    },
-})
-
 -- Rust tools
 local rt = require("rust-tools")
 rt.setup({
