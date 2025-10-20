@@ -1,7 +1,8 @@
 require("config.lazy")
 -- Mason
 require("mason").setup()
-require("mason-lspconfig").setup()
+require("mason-lspconfig").setup({
+})
 
 -- Rust tools
 local rt = require("rust-tools")
@@ -214,6 +215,23 @@ require('nvim-treesitter.configs').setup {
 -- -- vim.cmd("colorscheme rose-pine-moon")
 -- -- vim.cmd("colorscheme rose-pine-dawn")
 -- --
+--
+-- Format on save
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("lsp", { clear = true }),
+  callback = function(args)
+    -- 2
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      -- 3
+      buffer = args.buf,
+      callback = function()
+        -- 4 + 5
+        vim.lsp.buf.format {async = false, id = args.data.client_id }
+      end,
+    })
+  end
+})
+
 vim.cmd("colorscheme catppuccin")
 require("config.opts")
 require("config.keys")
