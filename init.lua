@@ -117,6 +117,7 @@ require('nvim-treesitter.configs').setup {
       "lua",
       "rust",
       "toml",
+      "go",
       "ruby",
       "tsx",
       "html",

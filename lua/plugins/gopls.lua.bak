@@ -1,0 +1,118 @@
+-- Standalone gopls configuration
+-- Replace your entire ~/.config/nvim/lua/plugins/gopls.lua with this
+
+return {
+  {
+    "neovim/nvim-lspconfig",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+      "hrsh7th/cmp-nvim-lsp",
+    },
+    config = function()
+      -- Get capabilities from nvim-cmp
+      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+      -- Setup gopls
+      require("lspconfig").gopls.setup({
+        capabilities = capabilities,
+        cmd = { "gopls" },
+        filetypes = { "go", "gomod", "gowork", "gotmpl" },
+        root_dir = require("lspconfig.util").root_pattern("go.work", "go.mod", ".git"),
+        settings = {
+          gopls = {
+            -- AUTOMATIC IMPORTS - THE KEY SETTINGS
+            completeUnimported = true,
+            usePlaceholders = true,
+            
+            -- Analysis
+            analyses = {
+              unusedparams = true,
+              shadow = true,
+              nilness = true,
+              unusedwrite = true,
+              useany = true,
+            },
+            
+            -- Formatting
+            gofumpt = true,
+            
+            -- Hints (inlay hints)
+            hints = {
+              assignVariableTypes = true,
+              compositeLiteralFields = true,
+              compositeLiteralTypes = true,
+              constantValues = true,
+              functionTypeParameters = true,
+              parameterNames = true,
+              rangeVariableTypes = true,
+            },
+            
+            -- Code lenses
+            codelenses = {
+              generate = true,
+              gc_details = false,
+              test = true,
+              tidy = true,
+            },
+            
+            staticcheck = true,
+            semanticTokens = true,
+          },
+        },
+        
+        -- On attach callback
+        on_attach = function(client, bufnr)
+          local opts = { buffer = bufnr, noremap = true, silent = true }
+          
+          -- Basic LSP keymaps
+          vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
+          vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
+          vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
+          vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
+          vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, opts)
+          vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, opts)
+          vim.keymap.set('n', '<leader>f', function() 
+            vim.lsp.buf.format({ async = true }) 
+          end, opts)
+          
+          -- Go-specific: organize imports
+          vim.keymap.set('n', '<leader>oi', function()
+            vim.lsp.buf.code_action({
+              context = { only = { "source.organizeImports" } },
+              apply = true,
+            })
+          end, opts)
+          
+          -- Enable inlay hints
+          if client.server_capabilities.inlayHintProvider then
+            vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+          end
+        end,
+      })
+      
+      -- Auto-organize imports and format on save
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        pattern = "*.go",
+        callback = function()
+          -- Organize imports
+          local params = vim.lsp.util.make_range_params()
+          params.context = { only = { "source.organizeImports" } }
+          local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params, 1000)
+          
+          for cid, res in pairs(result or {}) do
+            for _, r in pairs(res.result or {}) do
+              if r.edit then
+                local enc = (vim.lsp.get_client_by_id(cid) or {}).offset_encoding or "utf-16"
+                vim.lsp.util.apply_workspace_edit(r.edit, enc)
+              end
+            end
+          end
+          
+          -- Format
+          vim.lsp.buf.format({ async = false })
+        end,
+      })
+    end,
+  },
+}
